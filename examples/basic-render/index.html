@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECU架构可视化渲染示例</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+    }
+    
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+    
+    .sidebar {
+      width: 250px;
+      background-color: #f5f5f5;
+      border-right: 1px solid #ddd;
+      padding: 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      background-color: #ffffff;
+      background-image: 
+        linear-gradient(#e8e8e8 1px, transparent 1px),
+        linear-gradient(90deg, #e8e8e8 1px, transparent 1px);
+      background-size: 20px 20px;
+      transition: background-size 0.3s ease;
+    }
+    
+    /* 拖拽相关样式 */
+    .canvas-container[data-dragging="true"] {
+      cursor: move;
+    }
+    
+    /* 对齐辅助线样式 */
+    .alignment-guide {
+      position: absolute;
+      background-color: rgba(0, 162, 255, 0.5);
+      z-index: 1000;
+    }
+    
+    .alignment-guide.horizontal {
+      height: 1px;
+      left: 0;
+      right: 0;
+    }
+    
+    .alignment-guide.vertical {
+      width: 1px;
+      top: 0;
+      bottom: 0;
+    }
+    
+    /* 网格吸附指示器 */
+    .snap-indicator {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: rgba(255, 128, 0, 0.7);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1001;
+    }
+    
+    .toolbar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 100;
+      display: flex;
+      gap: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 5px;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    
+    .canvas {
+      width: 100%;
+      height: 100%;
+    }
+    
+    button {
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    
+    button:hover {
+      background-color: #1976D2;
+    }
+    
+    .node-list {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    
+    .node-item {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+    }
+    
+    .node-item:hover {
+      background-color: #e3f2fd;
+    }
+    
+    select {
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+    
+    /* 拖拽控制面板样式 */
+    .drag-controls {
+      font-size: 14px;
+    }
+    
+    .drag-controls input[type="checkbox"] {
+      margin-right: 6px;
+    }
+    
+    .drag-controls input[type="range"] {
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h2>ECU节点库</h2>
+      <select id="node-type">
+        <option value="domainController">域控制器</option>
+        <option value="sensor">传感器</option>
+        <option value="actuator">执行器</option>
+        <option value="gateway">网关</option>
+        <option value="ecu">ECU</option>
+        <option value="bus">总线</option>
+      </select>
+      <button id="add-node">添加节点</button>
+      <button id="clear-canvas">清空画布</button>
+      
+      <h3>布局</h3>
+      <select id="layout-type">
+        <option value="hierarchical">分层布局</option>
+        <option value="force">力导向布局</option>
+      </select>
+      <button id="apply-layout">应用布局</button>
+      
+      <h3>主题</h3>
+      <select id="theme-select">
+        <option value="default">默认主题</option>
+        <option value="dark">暗黑主题</option>
+      </select>
+      
+      <h3>节点列表</h3>
+      <div class="node-list" id="node-list">
+        <!-- 节点列表将在这里动态生成 -->
+      </div>
+    </div>
+    
+    <div class="canvas-container">
+      <div class="toolbar">
+        <button id="connect-nodes">连接节点</button>
+        <button id="delete-selected">删除选中</button>
+        <button id="zoom-in">放大</button>
+        <button id="zoom-out">缩小</button>
+        <button id="reset-view">重置视图</button>
+      </div>
+      <div class="canvas" id="canvas">
+        <!-- 渲染画布 -->
+      </div>
+    </div>
+  </div>
+  
+  <script src="../../dist/eea-renderer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html> 

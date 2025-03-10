@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EEA拓扑图示例</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .header {
+      padding: 10px 20px;
+      background-color: #333;
+      color: white;
+    }
+    .content {
+      display: flex;
+      flex: 1;
+    }
+    .sidebar {
+      width: 250px;
+      padding: 20px;
+      background-color: #eee;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+    }
+    .graph-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .topology-graph {
+      width: 100%;
+      height: 100%;
+      background-color: white;
+    }
+    .controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      gap: 10px;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    button {
+      padding: 8px 12px;
+      border: none;
+      background-color: #333;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #555;
+    }
+    .node-info {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: white;
+      border-radius: 5px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    .node-info h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>EEA拓扑图示例</h1>
+    </div>
+    <div class="content">
+      <div class="sidebar">
+        <h2>节点信息</h2>
+        <div class="node-info">
+          <h3>选中节点</h3>
+          <p>暂无选中节点</p>
+        </div>
+      </div>
+      <div class="graph-container">
+        <div class="topology-graph" id="graph"></div>
+        <div class="controls">
+          <button id="zoom-in">放大</button>
+          <button id="zoom-out">缩小</button>
+          <button id="reset">重置</button>
+          <button id="add-node">添加节点</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { EEATopology, NodePosition, ViewBox, SVGRenderEngine, Node, Edge } from '../dist/index.esm.js';
+
+    // 初始化拓扑图
+    const topology = EEATopology.create({
+      name: '示例拓扑图',
+      description: '这是一个简单的EEA拓扑图示例'
+    });
+
+    // 添加一些节点
+    const centralNode = topology.addNode({
+      type: 'central',
+      x: 400,
+      y: 300,
+      label: '中央控制器',
+      properties: {
+        fillColor: '#e3f2fd',
+        strokeColor: '#1565c0'
+      }
+    });
+
+    const node1 = topology.addNode({
+      type: 'sensor',
+      x: 200,
+      y: 150,
+      label: '传感器A',
+      properties: {
+        fillColor: '#e8f5e9',
+        strokeColor: '#2e7d32'
+      }
+    });
+
+    const node2 = topology.addNode({
+      type: 'sensor',
+      x: 600,
+      y: 150,
+      label: '传感器B',
+      properties: {
+        fillColor: '#e8f5e9',
+        strokeColor: '#2e7d32'
+      }
+    });
+
+    const node3 = topology.addNode({
+      type: 'actuator',
+      x: 200,
+      y: 450,
+      label: '执行器A',
+      properties: {
+        fillColor: '#fce4ec',
+        strokeColor: '#c2185b'
+      }
+    });
+
+    const node4 = topology.addNode({
+      type: 'actuator',
+      x: 600,
+      y: 450,
+      label: '执行器B',
+      properties: {
+        fillColor: '#fce4ec',
+        strokeColor: '#c2185b'
+      }
+    });
+
+    // 连接节点
+    topology.connectNodes(centralNode, node1, {
+      type: 'data',
+      label: '数据流',
+      properties: {
+        strokeColor: '#1565c0'
+      }
+    });
+
+    topology.connectNodes(centralNode, node2, {
+      type: 'data',
+      label: '数据流',
+      properties: {
+        strokeColor: '#1565c0'
+      }
+    });
+
+    topology.connectNodes(centralNode, node3, {
+      type: 'control',
+      label: '控制流',
+      properties: {
+        strokeColor: '#c2185b'
+      }
+    });
+
+    topology.connectNodes(centralNode, node4, {
+      type: 'control',
+      label: '控制流',
+      properties: {
+        strokeColor: '#c2185b'
+      }
+    });
+
+    // 创建视口
+    const viewBox = new ViewBox(0, 0, 800, 600);
+
+    // 获取容器元素
+    const container = document.getElementById('graph');
+
+    // 创建SVG渲染引擎
+    const renderEngine = SVGRenderEngine.create(container, viewBox);
+
+    // 渲染拓扑图
+    function renderTopology() {
+      // 清除现有内容
+      renderEngine.clear();
+      
+      // 获取所有节点和边
+      const nodes = topology.getNodes();
+      const edges = topology.getEdges();
+      
+      // 创建节点映射
+      const nodeMap = new Map();
+      nodes.forEach(nodeData => {
+        const node = new Node(
+          nodeData.id,
+          nodeData.type,
+          new NodePosition(nodeData.position.x, nodeData.position.y),
+          nodeData.label,
+          nodeData.properties
+        );
+        nodeMap.set(nodeData.id, node);
+        renderEngine.renderNode(node);
+      });
+      
+      // 渲染边
+      edges.forEach(edgeData => {
+        const sourceNode = nodeMap.get(edgeData.source);
+        const targetNode = nodeMap.get(edgeData.target);
+        
+        const edge = new Edge(
+          edgeData.id,
+          edgeData.source,
+          edgeData.target,
+          edgeData.type,
+          edgeData.label,
+          edgeData.properties
+        );
+        
+        renderEngine.renderEdge(edge, sourceNode, targetNode);
+      });
+    }
+
+    // 添加缩放控制
+    let currentScale = 1;
+    const zoomIn = document.getElementById('zoom-in');
+    const zoomOut = document.getElementById('zoom-out');
+    const reset = document.getElementById('reset');
+    const addNodeButton = document.getElementById('add-node');
+    
+    zoomIn.addEventListener('click', () => {
+      currentScale *= 1.2;
+      const newViewBox = viewBox.zoom(1.2, 400, 300);
+      renderEngine.updateViewBox(newViewBox);
+    });
+    
+    zoomOut.addEventListener('click', () => {
+      currentScale /= 1.2;
+      const newViewBox = viewBox.zoom(0.833, 400, 300);
+      renderEngine.updateViewBox(newViewBox);
+    });
+    
+    reset.addEventListener('click', () => {
+      currentScale = 1;
+      const newViewBox = new ViewBox(0, 0, 800, 600);
+      renderEngine.updateViewBox(newViewBox);
+    });
+    
+    // 添加节点按钮点击事件
+    let nodeCounter = 5;
+    addNodeButton.addEventListener('click', () => {
+      // 生成随机位置
+      const x = Math.random() * 700 + 50;
+      const y = Math.random() * 500 + 50;
+      
+      // 随机类型
+      const types = ['sensor', 'actuator', 'gateway'];
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      
+      // 添加节点
+      topology.addNode({
+        type: randomType,
+        x,
+        y,
+        label: `${randomType} ${nodeCounter++}`,
+        properties: {
+          fillColor: randomType === 'sensor' ? '#e8f5e9' : 
+                    randomType === 'actuator' ? '#fce4ec' : '#fff8e1',
+          strokeColor: randomType === 'sensor' ? '#2e7d32' : 
+                      randomType === 'actuator' ? '#c2185b' : '#ff8f00'
+        }
+      });
+      
+      // 重新渲染
+      renderTopology();
+    });
+
+    // 初始渲染
+    renderTopology();
+  </script>
+</body>
+</html> 
